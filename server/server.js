@@ -18,13 +18,21 @@ mongoose.connect(process.env.DB_LOCATION, {
   autoIndex: true,
 });
 
+const formatDatatoSend = (user) => {
+  return {
+    username: user.personal_info.username,
+    fullname: user.personal_info.fullname,
+    profile_img: user.personal_info.profile_img,
+  };
+};
+
 const generateUsername = async (email) => {
   let username = email.split("@")[0];
   let isUsernameNotUnique = await User.exists({
     "personal_info.username": username,
   }).then((result) => result);
 
-  isUsernameNotUnique ? (username += nanoid()) : "";
+  isUsernameNotUnique ? (username += nanoid().substring(0, 5)) : "";
   return username;
 };
 
@@ -57,7 +65,7 @@ server.post("/signup", (req, res) => {
   }
   //hashing password
   bcrypt.hash(password, 10, async (err, hashed_password) => {
-    let username = await generateUsername();
+    let username = await generateUsername(email);
 
     let user = new User({
       personal_info: {
@@ -70,7 +78,7 @@ server.post("/signup", (req, res) => {
     user
       .save()
       .then((u) => {
-        return res.status(200).json({ user: u });
+        return res.status(200).json(formatDatatoSend(u));
       })
       .catch((err) => {
         if (err.code == 11000) {
